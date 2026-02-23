@@ -1,0 +1,229 @@
+:root {
+  --bg: #0e131f;
+  --felt: #0d5d56;
+  --felt-dark: #083b36;
+  --panel: #1a2235;
+  --text: #ecf0f8;
+  --muted: #a3b0c7;
+  --danger: #f66b6b;
+  --accent: #ffd166;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, #13203a, var(--bg));
+  color: var(--text);
+}
+
+.app-shell {
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+header h1 {
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+header p {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.lobby-card,
+.panel {
+  background: rgba(26, 34, 53, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+input,
+button {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #172033;
+  color: var(--text);
+  padding: 10px;
+}
+
+button {
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #22314f;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.lobby-actions,
+.panel-actions,
+.amount-row {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.table-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+}
+
+.table-felt {
+  background: radial-gradient(circle at center, var(--felt), var(--felt-dark));
+  border-radius: 50px;
+  padding: 26px;
+  min-height: 250px;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  border: 8px solid #16322f;
+  animation: popin 0.3s ease;
+}
+
+@keyframes popin {
+  from {
+    transform: scale(0.98);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.community-row {
+  display: flex;
+  gap: 10px;
+}
+
+.card-badge {
+  width: 48px;
+  height: 64px;
+  border-radius: 9px;
+  background: #f2f4f8;
+  color: #101320;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+}
+
+.card-badge.hidden {
+  background: repeating-linear-gradient(45deg, #263b58, #263b58 6px, #20314a 6px, #20314a 12px);
+  color: #deebff;
+}
+
+.pot {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.seats-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.seat {
+  border: 2px solid;
+  border-radius: 14px;
+  background: rgba(20, 26, 39, 0.95);
+  padding: 10px;
+}
+
+.seat.turn {
+  box-shadow: 0 0 0 2px #ffd166 inset, 0 0 18px rgba(255, 209, 102, 0.4);
+}
+
+.seat-top,
+.seat-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.seat-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.seat-badges {
+  display: flex;
+  gap: 4px;
+}
+
+.badge {
+  background: #21324e;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.seat-cards {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.status {
+  text-transform: capitalize;
+}
+
+.status.folded,
+.status.disconnected {
+  color: var(--danger);
+}
+
+.panel-row {
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.panel-header {
+  font-weight: 700;
+}
+
+aside {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.error {
+  background: rgba(246, 107, 107, 0.2);
+  border: 1px solid rgba(246, 107, 107, 0.7);
+  border-radius: 10px;
+  margin-top: 10px;
+  padding: 10px;
+}
+
+.danger {
+  background: rgba(246, 107, 107, 0.25);
+}
+
+@media (max-width: 900px) {
+  .table-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .table-felt {
+    border-radius: 28px;
+  }
+}

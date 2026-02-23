@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: poker-multiplayer-server
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm install && npm run build -w shared && npm run build -w server
+    startCommand: npm run start -w server
+    healthCheckPath: /health
+    envVars:
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: MIN_PLAYERS_TO_START
+        value: "2"
+      - key: TURN_TIMEOUT_SECONDS
+        value: "30"
+      - key: DEFAULT_SMALL_BLIND
+        value: "10"
+      - key: DEFAULT_BIG_BLIND
+        value: "20"
