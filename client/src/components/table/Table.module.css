@@ -1,0 +1,415 @@
+.stage {
+  display: grid;
+  gap: 14px;
+}
+
+.metaBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: #c8d0dc;
+  font-size: 0.92rem;
+}
+
+.metaBar button,
+.utilityRow button,
+.actionPanel button,
+.sliderWrap button {
+  border: 0;
+  border-radius: 10px;
+  background: #232a39;
+  color: #e9eef6;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.metaBar button:hover,
+.utilityRow button:hover,
+.actionPanel button:hover,
+.sliderWrap button:hover {
+  background: #2f384a;
+}
+
+.tableShell {
+  position: relative;
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  aspect-ratio: 16 / 10;
+  background: radial-gradient(circle at 50% 30%, rgba(84, 105, 140, 0.12), rgba(12, 15, 24, 0.95));
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.45), 0 20px 36px rgba(0, 0, 0, 0.5);
+}
+
+.tableOval {
+  position: absolute;
+  inset: 17% 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 25%, #35a368, #1b6f44 58%, #145334);
+  border: 10px solid #20262e;
+  box-shadow: inset 0 10px 30px rgba(255, 255, 255, 0.14), inset 0 -22px 30px rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: center;
+  gap: 10px;
+}
+
+.centerStatus {
+  color: rgba(236, 242, 248, 0.78);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 0.85rem;
+}
+
+.potStack {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  margin-top: 12px;
+}
+
+.potAmount {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #f8d980;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.potPulse {
+  animation: potPulse 0.42s ease;
+}
+
+@keyframes potPulse {
+  0% { transform: translateY(3px) scale(0.95); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.sidePots {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  color: #f2f6ff;
+  font-size: 0.76rem;
+}
+
+.potToWinner {
+  color: #7de8ac;
+  animation: toWinner 0.45s ease;
+}
+
+@keyframes toWinner {
+  0% { transform: translateY(-4px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.communityCards,
+.cardsRow {
+  display: flex;
+  gap: 8px;
+}
+
+.tableCard {
+  width: 40px;
+  height: 56px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.placeholder {
+  background: rgba(15, 25, 35, 0.45);
+}
+
+.dealt {
+  background: linear-gradient(180deg, #ffffff, #e7edf7);
+  color: #141922;
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.3);
+  animation: dealIn 0.28s ease;
+}
+
+.hiddenCard {
+  background: repeating-linear-gradient(45deg, #2c3f5c, #2c3f5c 6px, #203049 6px, #203049 12px);
+  color: #dbe7ff;
+}
+
+@keyframes dealIn {
+  0% { transform: translateY(-8px) scale(0.94); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.seatWrap {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 128px;
+}
+
+.seat {
+  background: rgba(15, 20, 30, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px;
+  display: grid;
+  gap: 4px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+.emptySeat {
+  border: 1px dashed rgba(255, 255, 255, 0.32);
+  color: #aeb8ca;
+  min-height: 74px;
+  place-items: center;
+  background: rgba(16, 20, 30, 0.35);
+}
+
+.activeSeat {
+  box-shadow: 0 0 0 1px #71e09d inset, 0 0 16px rgba(113, 224, 157, 0.55);
+}
+
+.foldedSeat {
+  opacity: 0.48;
+}
+
+.seatHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.playerName {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #f3f7ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playerStack {
+  font-size: 0.78rem;
+  color: #9fd2ac;
+  font-weight: 700;
+}
+
+.seatBadges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kickBtn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 0;
+  background: rgba(240, 93, 93, 0.45);
+  color: #f8fbff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dealerButton {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f7d44f;
+  color: #121315;
+  font-size: 0.68rem;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+}
+
+.blindBadge {
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.smallBlind {
+  background: #4a7fd7;
+}
+
+.bigBlind {
+  background: #d76c4a;
+}
+
+.lastActionTag {
+  font-size: 0.65rem;
+  color: #d3d9e8;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 2px 6px;
+  width: max-content;
+}
+
+.betPuck {
+  margin: 6px auto 0;
+  width: max-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  background: #f3ca66;
+  color: #1a1b1e;
+  font-weight: 800;
+  animation: chipToPot 0.32s ease;
+}
+
+@keyframes chipToPot {
+  0% { transform: translateY(6px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.turnRing {
+  transform: rotate(-90deg);
+}
+
+.turnRingTrack {
+  fill: transparent;
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 3;
+}
+
+.turnRingProgress {
+  fill: transparent;
+  stroke: #77e5a6;
+  stroke-width: 3;
+  transition: stroke-dashoffset 0.5s linear;
+}
+
+.slot0 { left: 50%; top: 10%; }
+.slot1 { left: 72%; top: 17%; }
+.slot2 { left: 86%; top: 33%; }
+.slot3 { left: 88%; top: 53%; }
+.slot4 { left: 77%; top: 73%; }
+.slot5 { left: 50%; top: 83%; }
+.slot6 { left: 23%; top: 73%; }
+.slot7 { left: 12%; top: 53%; }
+.slot8 { left: 14%; top: 33%; }
+
+.actionPanel {
+  position: sticky;
+  bottom: 0;
+  background: rgba(14, 19, 28, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.actionPanelGhost {
+  position: sticky;
+  bottom: 0;
+  background: rgba(16, 21, 31, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  color: #9da8bf;
+  padding: 12px;
+}
+
+.actionRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.primaryAction {
+  background: linear-gradient(180deg, #59b974, #3f9f5a);
+  color: #f3fff7;
+  font-weight: 700;
+}
+
+.sliderWrap {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  display: grid;
+  gap: 8px;
+}
+
+.sliderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sliderWrap input[type='range'],
+.sliderWrap input[type='number'] {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px;
+  background: #1b2130;
+  color: #eef3fb;
+}
+
+.quickBetGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.utilityRow {
+  display: flex;
+  gap: 8px;
+}
+
+.actionLog {
+  background: rgba(17, 23, 33, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px;
+  max-height: 168px;
+  overflow: auto;
+}
+
+.logTitle {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.logLine {
+  color: #b8c3d8;
+  font-size: 0.82rem;
+  margin-top: 3px;
+}
+
+@media (max-width: 920px) {
+  .tableShell {
+    aspect-ratio: 16 / 13;
+  }
+
+  .seatWrap {
+    width: 104px;
+  }
+
+  .tableCard {
+    width: 33px;
+    height: 47px;
+    font-size: 0.76rem;
+  }
+
+  .slot0 { left: 50%; top: 12%; }
+  .slot1 { left: 74%; top: 19%; }
+  .slot2 { left: 88%; top: 35%; }
+  .slot3 { left: 89%; top: 55%; }
+  .slot4 { left: 78%; top: 75%; }
+  .slot5 { left: 50%; top: 87%; }
+  .slot6 { left: 22%; top: 75%; }
+  .slot7 { left: 11%; top: 55%; }
+  .slot8 { left: 12%; top: 35%; }
+
+  .actionRow {
+    grid-template-columns: 1fr;
+  }
+}

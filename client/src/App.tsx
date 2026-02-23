@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ClientView, GameAction } from '@poker/shared';
 import { socket } from './lib/socket';
-import { CardBadge } from './components/CardBadge';
-import { Seat } from './components/Seat';
-import { ActionPanel } from './components/ActionPanel';
 import { useTicker } from './hooks/useTicker';
+import { Table } from './components/table/Table';
 
 function roomFromPath(): string {
   const parts = window.location.pathname.split('/').filter(Boolean);
@@ -14,6 +12,21 @@ function roomFromPath(): string {
   return '';
 }
 
+function derivePlayerAction(lastActionText: string, names: { id: string; nickname: string }[]): { playerId: string; action: string } | null {
+  const matched = [...names]
+    .sort((a, b) => b.nickname.length - a.nickname.length)
+    .find((player) => lastActionText.startsWith(player.nickname));
+
+  if (!matched) {
+    return null;
+  }
+
+  return {
+    playerId: matched.id,
+    action: lastActionText.slice(matched.nickname.length).trim(),
+  };
+}
+
 export function App() {
   const [nickname, setNickname] = useState('');
   const [joinCode, setJoinCode] = useState(roomFromPath());
@@ -21,10 +34,31 @@ export function App() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [view, setView] = useState<ClientView | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionLog, setActionLog] = useState<string[]>([]);
+  const [lastActionByPlayer, setLastActionByPlayer] = useState<Record<string, string | null>>({});
   const now = useTicker(500);
 
   useEffect(() => {
-    const onState = (next: ClientView) => setView(next);
+    const onState = (next: ClientView) => {
+      setView(next);
+      const actionText = next.game.lastActionText;
+      if (actionText) {
+        setActionLog((prev) => {
+          if (prev[0] === actionText) return prev;
+          return [actionText, ...prev].slice(0, 12);
+        });
+
+        const parsed = derivePlayerAction(
+          actionText,
+          next.game.players.map((player) => ({ id: player.id, nickname: player.nickname })),
+        );
+
+        if (parsed) {
+          setLastActionByPlayer((prev) => ({ ...prev, [parsed.playerId]: parsed.action || null }));
+        }
+      }
+    };
+
     const onError = (message: string) => setError(message);
     const onJoined = (payload: { roomId: string; playerId: string; sessionToken: string }) => {
       setRoomId(payload.roomId);
@@ -44,14 +78,18 @@ export function App() {
     };
   }, []);
 
-  const me = view?.me;
   const game = view?.game;
 
-  const turnSeconds = useMemo(() => {
-    if (!game?.turnEndsAt) return null;
-    const delta = Math.max(0, game.turnEndsAt - now);
-    return Math.ceil(delta / 1000);
-  }, [game?.turnEndsAt, now]);
+  useEffect(() => {
+    if (!game?.winners?.length) return;
+    const summary = game.winners
+      .map((winner) => {
+        const player = game.players.find((p) => p.id === winner.playerId);
+        return `${player?.nickname ?? winner.playerId} +${winner.payout} (${winner.rankLabel})`;
+      })
+      .join(', ');
+    setActionLog((prev) => [summary, ...prev].slice(0, 12));
+  }, [game?.winners, game?.players]);
 
   const handleCreate = () => {
     setError(null);
@@ -78,17 +116,21 @@ export function App() {
     socket.emit('game:action', { roomId, action });
   };
 
-  const isHost = Boolean(game && playerId && game.hostPlayerId === playerId);
+  const heroSubtitle = useMemo(() => {
+    if (!game?.currentTurnPlayerId) return 'Waiting for players';
+    const turnPlayer = game.players.find((player) => player.id === game.currentTurnPlayerId);
+    return turnPlayer ? `${turnPlayer.nickname} to act` : 'Table running';
+  }, [game]);
 
   return (
-    <div className="app-shell">
-      <header>
-        <h1>Texas Hold'em Live</h1>
-        <p>Realtime browser poker room</p>
+    <div className="appFrame">
+      <header className="topHeader">
+        <h1>Hold'em Arena</h1>
+        <p>{heroSubtitle}</p>
       </header>
 
       {!game ? (
-        <section className="lobby-card">
+        <section className="lobbyCard">
           <input
             placeholder="Nickname"
             value={nickname}
@@ -100,72 +142,28 @@ export function App() {
             value={joinCode}
             onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
           />
-          <div className="lobby-actions">
-            <button onClick={handleCreate} disabled={!nickname.trim()}>
-              Create Room
-            </button>
-            <button onClick={handleJoin} disabled={!nickname.trim() || !joinCode.trim()}>
-              Join Room
-            </button>
+          <div className="lobbyActions">
+            <button onClick={handleCreate} disabled={!nickname.trim()}>Create Room</button>
+            <button onClick={handleJoin} disabled={!nickname.trim() || !joinCode.trim()}>Join Room</button>
           </div>
-          {error ? <div className="error">{error}</div> : null}
+          {error ? <div className="errorBox">{error}</div> : null}
         </section>
       ) : (
-        <section className="table-layout">
-          <div className="table-area">
-            <div className="table-felt">
-              <div className="community-row">
-                {game.communityCards.map((card, idx) => (
-                  <CardBadge key={`${card.rank}-${card.suit}-${idx}`} card={card} />
-                ))}
-              </div>
-              <div className="pot">Pot: {game.totalPot}</div>
-              <div className="street">Street: {game.street}</div>
-              <div className="turn-timer">{turnSeconds !== null ? `Turn: ${turnSeconds}s` : 'Waiting'}</div>
-              <div className="last-action">{game.lastActionText ?? 'No recent action'}</div>
-            </div>
-
-            <div className="seats-grid">
-              {game.players.map((player) => (
-                <Seat
-                  key={player.id}
-                  player={player}
-                  isMe={player.id === playerId}
-                  holeCards={me?.holeCards ?? []}
-                  canKick={Boolean(isHost && player.id !== playerId)}
-                  onKick={() => socket.emit('room:kick', { roomId: game.roomId, targetPlayerId: player.id })}
-                />
-              ))}
-            </div>
-          </div>
-
-          <aside>
-            <ActionPanel view={view} roomId={game.roomId} onAction={handleAction} />
-            <div className="panel">
-              <button onClick={() => navigator.clipboard.writeText(window.location.href)}>Copy Invite Link</button>
-              {isHost ? (
-                <>
-                  <button onClick={() => socket.emit('room:start', game.roomId)}>Start Hand</button>
-                  <button onClick={() => socket.emit('room:reset', game.roomId)}>Reset Table</button>
-                </>
-              ) : null}
-            </div>
-            {game.winners?.length ? (
-              <div className="panel">
-                <div className="panel-header">Showdown</div>
-                {game.winners.map((winner) => {
-                  const player = game.players.find((p) => p.id === winner.playerId);
-                  return (
-                    <div key={winner.playerId} className="panel-row">
-                      {player?.nickname ?? winner.playerId}: +{winner.payout} ({winner.rankLabel})
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
-            {error ? <div className="error">{error}</div> : null}
-          </aside>
-        </section>
+        <>
+          <Table
+            view={view}
+            playerId={playerId}
+            nowMs={now}
+            lastActionByPlayer={lastActionByPlayer}
+            actionLog={actionLog}
+            onAction={handleAction}
+            onStart={() => socket.emit('room:start', game.roomId)}
+            onReset={() => socket.emit('room:reset', game.roomId)}
+            onKick={(targetPlayerId) => socket.emit('room:kick', { roomId: game.roomId, targetPlayerId })}
+            onCopyLink={() => navigator.clipboard.writeText(window.location.href)}
+          />
+          {error ? <div className="errorBox">{error}</div> : null}
+        </>
       )}
     </div>
   );
