@@ -105,10 +105,10 @@ export function Table({
       <ActionPanel view={view} onAction={onAction} waitingForName={waitingFor?.nickname ?? null} />
 
       <div className={styles.utilityRow}>
-        {hero?.status === 'busted' ? (
+        {(hero?.status === 'busted' || (hero?.status === 'sitting_out' && hero.chips === 0 && game.settings.allowRebuy)) ? (
           <button onClick={onRebuy}>BUSTED — Rebuy{rebuySeconds !== null ? ` (${rebuySeconds}s)` : ''}</button>
         ) : null}
-        {hero?.status === 'sitting_out' ? <button onClick={onSitIn}>Sit Back In</button> : null}
+        {hero?.status === 'sitting_out' && hero.chips > 0 ? <button onClick={onSitIn}>Sit Back In</button> : null}
         {hero?.status === 'active' ? <button onClick={onSitOut}>Sit Out</button> : null}
         <button onClick={onLeaveSeat}>Leave Seat</button>
         {isHost ? (

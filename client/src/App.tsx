@@ -57,6 +57,8 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [hasTriedRouteJoin, setHasTriedRouteJoin] = useState(false);
   const [publicRooms, setPublicRooms] = useState<PublicRoomSummary[]>([]);
+  const [createRoomName, setCreateRoomName] = useState('Poker Room');
+  const [createVisibility, setCreateVisibility] = useState<'public' | 'unlisted'>('public');
   const [settingsDraft, setSettingsDraft] = useState<Partial<TableSettings>>({});
   const [blindScheduleText, setBlindScheduleText] = useState('');
   const now = useTicker(500);
@@ -153,7 +155,7 @@ export function App() {
 
   const handleCreate = () => {
     setError(null);
-    socket.emit('room:create', { nickname }, (result) => {
+    socket.emit('room:create', { nickname, settings: { roomName: createRoomName, visibility: createVisibility } }, (result) => {
       if (!result.ok) setError(result.error);
     });
   };
@@ -217,6 +219,19 @@ export function App() {
                 value={joinCode}
                 onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
               />
+              <input
+                placeholder="Room name"
+                value={createRoomName}
+                maxLength={40}
+                onChange={(event) => setCreateRoomName(event.target.value)}
+              />
+              <label className="inlineLabel">
+                Visibility
+                <select value={createVisibility} onChange={(event) => setCreateVisibility(event.target.value as 'public' | 'unlisted')}>
+                  <option value="public">Public</option>
+                  <option value="unlisted">Unlisted</option>
+                </select>
+              </label>
               <div className="lobbyActions">
                 <button onClick={handleCreate} disabled={!nickname.trim()}>Create Room</button>
                 <button onClick={() => handleJoin()} disabled={!nickname.trim() || !joinCode.trim()}>Join Room</button>

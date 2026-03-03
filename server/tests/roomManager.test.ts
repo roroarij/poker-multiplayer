@@ -118,4 +118,47 @@ describe('room manager mechanics', () => {
     expect(sitIn.ok).toBe(true);
     expect(manager.getRoom(roomId)!.state.players.find((player) => player.id === hostId)!.status).toBe('active');
   });
+
+  it('allows rebuy after busted window expires by sitting in later', () => {
+    const manager = createManager();
+    const created = manager.createRoom('Host', {
+      allowRebuy: true,
+      rebuyStack: 700,
+      rebuyWindowSeconds: 20,
+      maxRebuysPerPlayer: null,
+    });
+
+    const roomId = created.roomId!;
+    const hostId = created.playerId!;
+    const room = manager.getRoom(roomId)!;
+    const host = room.state.players.find((player) => player.id === hostId)!;
+
+    host.chips = 0;
+    host.status = 'active';
+    room.state.tableStatus = 'showdown';
+    manager.updateSettings(roomId, hostId, {});
+
+    vi.advanceTimersByTime(21000);
+    manager.updateSettings(roomId, hostId, {});
+    expect(manager.getRoom(roomId)!.state.players.find((player) => player.id === hostId)!.status).toBe('sitting_out');
+
+    const sitIn = manager.sitIn(roomId, hostId);
+    expect(sitIn.ok).toBe(true);
+    const afterSitIn = manager.getRoom(roomId)!.state.players.find((player) => player.id === hostId)!;
+    expect(afterSitIn.chips).toBe(700);
+    expect(afterSitIn.status).toBe('active');
+  });
+
+  it('lists only public rooms in lobby discovery', () => {
+    const manager = createManager();
+    const publicRoom = manager.createRoom('PublicHost', { visibility: 'public', roomName: 'Public One' });
+    const hiddenRoom = manager.createRoom('HiddenHost', { visibility: 'unlisted', roomName: 'Hidden One' });
+
+    expect(publicRoom.ok).toBe(true);
+    expect(hiddenRoom.ok).toBe(true);
+
+    const rooms = manager.listPublicRooms();
+    expect(rooms.some((room) => room.roomName === 'Public One')).toBe(true);
+    expect(rooms.some((room) => room.roomName === 'Hidden One')).toBe(false);
+  });
 });

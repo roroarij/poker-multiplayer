@@ -56,6 +56,21 @@ body {
   padding: 10px;
 }
 
+.inlineLabel {
+  display: grid;
+  gap: 4px;
+  font-size: 0.84rem;
+  color: #c9d4e8;
+}
+
+.inlineLabel select {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #1a2031;
+  color: #eef4ff;
+  padding: 10px;
+}
+
 .lobbyActions {
   display: grid;
   gap: 8px;

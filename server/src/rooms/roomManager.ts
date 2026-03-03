@@ -239,7 +239,12 @@ export class RoomManager {
     if (!player) return { ok: false, error: 'Player not found' };
 
     if (player.chips <= 0) {
-      return { ok: false, error: 'No chips available. Rebuy required' };
+      if (room.settings.allowRebuy) {
+        const rebuyResult = this.rebuy(roomId, playerId);
+        if (!rebuyResult.ok) return rebuyResult;
+      } else {
+        return { ok: false, error: 'No chips available. Rebuy required' };
+      }
     }
 
     player.status = 'active';
@@ -259,11 +264,6 @@ export class RoomManager {
     const used = room.rebuysUsed.get(playerId) ?? 0;
     if (room.settings.maxRebuysPerPlayer !== null && used >= room.settings.maxRebuysPerPlayer) {
       return { ok: false, error: 'Rebuy limit reached' };
-    }
-
-    const availableUntil = room.rebuyAvailableUntilByPlayerId.get(playerId);
-    if (availableUntil && Date.now() > availableUntil) {
-      return { ok: false, error: 'Rebuy window expired' };
     }
 
     player.chips = room.settings.rebuyStack;
