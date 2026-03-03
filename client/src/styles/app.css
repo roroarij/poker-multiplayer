@@ -61,6 +61,27 @@ body {
   gap: 8px;
 }
 
+.publicLobby {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  gap: 6px;
+}
+
+.publicRoomRow {
+  display: grid;
+  grid-template-columns: 1.6fr 0.7fr 0.7fr 0.8fr auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.mutedText {
+  color: #9aa6bf;
+  font-size: 0.86rem;
+}
+
 .lobbyActions button {
   border: 0;
   border-radius: 10px;
@@ -84,4 +105,40 @@ body {
   background: rgba(255, 111, 111, 0.18);
   border-radius: 10px;
   padding: 10px;
+}
+
+.settingsCard {
+  background: rgba(20, 26, 39, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.settingsCard h3 {
+  margin: 0;
+}
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.settingsCard label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: #c5d0e4;
+}
+
+.settingsCard input,
+.settingsCard select,
+.settingsCard button {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #1a2031;
+  color: #eef4ff;
+  padding: 8px;
 }

@@ -404,7 +404,11 @@ export function createInitialState(roomId: string, config: EngineConfig): Engine
   };
 }
 
-export function addPlayer(state: EngineState, player: { id: string; nickname: string; sessionToken: string }): EngineState {
+export function addPlayer(
+  state: EngineState,
+  player: { id: string; nickname: string; sessionToken: string },
+  startingStack = 2000,
+): EngineState {
   const next = cloneState(state);
   if (next.players.some((existing) => existing.id === player.id)) {
     return next;
@@ -418,7 +422,7 @@ export function addPlayer(state: EngineState, player: { id: string; nickname: st
     id: player.id,
     nickname: player.nickname,
     seatIndex,
-    chips: 2000,
+    chips: startingStack,
     committedThisRound: 0,
     committedThisHand: 0,
     status: 'active',

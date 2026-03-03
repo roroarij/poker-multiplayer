@@ -24,7 +24,30 @@ export type Street = 'preflop' | 'flop' | 'turn' | 'river' | 'showdown';
 
 export type TableStatus = 'waiting' | 'in_hand' | 'showdown';
 
-export type PlayerStatus = 'active' | 'folded' | 'all_in' | 'sitting_out' | 'disconnected';
+export type PlayerStatus = 'active' | 'folded' | 'all_in' | 'sitting_out' | 'disconnected' | 'busted';
+
+export interface BlindLevel {
+  sb: number;
+  bb: number;
+}
+
+export interface TableSettings {
+  roomName: string;
+  visibility: 'public' | 'unlisted';
+  maxSeats: number;
+  startingStack: number;
+  smallBlind: number;
+  bigBlind: number;
+  minPlayersToStart: number;
+  turnTimeoutSeconds: number;
+  allowRebuy: boolean;
+  rebuyStack: number;
+  rebuyWindowSeconds: number;
+  maxRebuysPerPlayer: number | null;
+  blindLevelsEnabled: boolean;
+  blindLevelDurationSeconds: number;
+  blindSchedule: BlindLevel[];
+}
 
 export interface PlayerSnapshot {
   id: string;
@@ -41,6 +64,8 @@ export interface PlayerSnapshot {
   isHost: boolean;
   isConnected: boolean;
   color: string;
+  rebuysUsed: number;
+  rebuyAvailableUntil: number | null;
 }
 
 export interface Pot {
@@ -58,6 +83,7 @@ export interface ShowdownResult {
 
 export interface PublicGameState {
   roomId: string;
+  roomName: string;
   tableStatus: TableStatus;
   street: Street;
   handNumber: number;
@@ -76,6 +102,10 @@ export interface PublicGameState {
   blindBig: number;
   turnEndsAt: number | null;
   lastActionText: string | null;
+  settings: TableSettings;
+  blindLevelIndex: number;
+  nextLevelAt: number | null;
+  logEvents: LogEvent[];
   winners?: ShowdownResult[];
 }
 
@@ -87,6 +117,17 @@ export interface PlayerPrivateState {
   minRaiseTo: number;
   maxBet: number;
   sessionToken: string;
+}
+
+export interface PublicRoomSummary {
+  roomId: string;
+  roomName: string;
+  smallBlind: number;
+  bigBlind: number;
+  playersSeated: number;
+  maxSeats: number;
+  status: 'waiting' | 'in_hand';
+  createdAt: number;
 }
 
 export type LegalActionType = 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'all_in';
@@ -111,7 +152,7 @@ export interface RoomConfig {
 
 export interface CreateRoomInput {
   nickname: string;
-  config?: Partial<RoomConfig>;
+  settings?: Partial<TableSettings>;
 }
 
 export interface JoinRoomInput {
@@ -133,10 +174,18 @@ export type GameAction =
   | { type: 'raise'; amount: number }
   | { type: 'all_in' };
 
+export type LogEvent =
+  | { type: 'PLAYER_ACTION'; playerName: string; action: string; amount?: number }
+  | { type: 'STREET'; street: 'FLOP' | 'TURN' | 'RIVER'; cards: Card[]; board: Card[] }
+  | { type: 'SHOWDOWN'; winners: { playerName: string; amount: number; handName: string; holeCards?: Card[] }[]; board: Card[] }
+  | { type: 'POT'; message: string; amount?: number };
+
 export interface ServerToClientEvents {
   'room:state': (view: ClientView) => void;
   'room:error': (message: string) => void;
   'room:joined': (payload: { roomId: string; playerId: string; sessionToken: string }) => void;
+  'room:blind-level-changed': (payload: { roomId: string; levelIndex: number; sb: number; bb: number; nextLevelAt: number | null }) => void;
+  'lobby:public-rooms': (rooms: PublicRoomSummary[]) => void;
 }
 
 export interface ClientToServerEvents {
@@ -146,5 +195,11 @@ export interface ClientToServerEvents {
   'room:start': (roomId: string) => void;
   'room:reset': (roomId: string) => void;
   'room:kick': (payload: { roomId: string; targetPlayerId: string }) => void;
+  'room:update-settings': (payload: { roomId: string; settings: Partial<TableSettings> }) => void;
+  'room:rebuy': (payload: { roomId: string }) => void;
+  'room:sit-out': (payload: { roomId: string }) => void;
+  'room:sit-in': (payload: { roomId: string }) => void;
+  'room:leave-seat': (payload: { roomId: string }) => void;
+  'lobby:get-public-rooms': () => void;
   'game:action': (input: GameActionInput) => void;
 }

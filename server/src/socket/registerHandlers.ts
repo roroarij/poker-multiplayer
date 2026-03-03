@@ -2,6 +2,15 @@ import type { Server } from 'socket.io';
 import type { ClientToServerEvents, ServerToClientEvents } from '@poker/shared';
 import type { Socket } from 'socket.io';
 import { RoomManager } from '../rooms/roomManager.js';
+import {
+  parseCreateRoomInput,
+  parseGameActionPayload,
+  parseJoinRoomInput,
+  parseKickPayload,
+  parseRoomActionPayload,
+  parseRoomId,
+  parseUpdateSettingsPayload,
+} from '../validation/schemas.js';
 
 interface SocketData {
   roomId?: string;
@@ -9,6 +18,13 @@ interface SocketData {
 }
 
 type PokerSocket = Socket<ClientToServerEvents, ServerToClientEvents, object, SocketData>;
+
+function asErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'Invalid payload';
+}
 
 export function registerHandlers(io: Server<ClientToServerEvents, ServerToClientEvents>, rooms: RoomManager): void {
   const emitRoomState = (roomId: string): void => {
@@ -24,98 +40,217 @@ export function registerHandlers(io: Server<ClientToServerEvents, ServerToClient
     }
   };
 
+  const emitPublicRooms = (): void => {
+    io.emit('lobby:public-rooms', rooms.listPublicRooms());
+  };
+
   io.on('connection', (socket: PokerSocket) => {
-    socket.on('room:create', (input, cb) => {
-      const result = rooms.createRoom(input.nickname, input.config ?? {});
-      if (!result.ok || !result.roomId || !result.playerId || !result.sessionToken) {
-        cb({ ok: false, error: result.error ?? 'Failed to create room' });
-        return;
-      }
+    socket.emit('lobby:public-rooms', rooms.listPublicRooms());
 
-      socket.join(result.roomId);
-      socket.data.roomId = result.roomId;
-      socket.data.playerId = result.playerId;
-      rooms.bindSocket(result.roomId, result.playerId, socket.id);
+    socket.on('room:create', (rawInput, cb) => {
+      try {
+        const input = parseCreateRoomInput(rawInput);
+        const result = rooms.createRoom(input.nickname, input.settings ?? {});
+        if (!result.ok || !result.roomId || !result.playerId || !result.sessionToken) {
+          cb({ ok: false, error: result.error ?? 'Failed to create room' });
+          return;
+        }
 
-      cb({ ok: true, roomId: result.roomId });
-      socket.emit('room:joined', {
-        roomId: result.roomId,
-        playerId: result.playerId,
-        sessionToken: result.sessionToken,
-      });
-      emitRoomState(result.roomId);
-    });
+        socket.join(result.roomId);
+        socket.data.roomId = result.roomId;
+        socket.data.playerId = result.playerId;
+        rooms.bindSocket(result.roomId, result.playerId, socket.id);
 
-    socket.on('room:join', (input, cb) => {
-      const result = rooms.joinRoom(input.roomId, input.nickname, input.sessionToken);
-      if (!result.ok || !result.roomId || !result.playerId || !result.sessionToken) {
-        cb({ ok: false, error: result.error ?? 'Failed to join room' });
-        return;
-      }
-
-      socket.join(result.roomId);
-      socket.data.roomId = result.roomId;
-      socket.data.playerId = result.playerId;
-      rooms.bindSocket(result.roomId, result.playerId, socket.id);
-
-      cb({ ok: true, roomId: result.roomId });
-      socket.emit('room:joined', {
-        roomId: result.roomId,
-        playerId: result.playerId,
-        sessionToken: result.sessionToken,
-      });
-      emitRoomState(result.roomId);
-    });
-
-    socket.on('room:leave', (roomId) => {
-      const playerId = socket.data.playerId;
-      if (!playerId) return;
-
-      rooms.leaveRoom(roomId, playerId);
-      socket.leave(roomId);
-      socket.data.roomId = undefined;
-      socket.data.playerId = undefined;
-    });
-
-    socket.on('room:start', (roomId) => {
-      const playerId = socket.data.playerId;
-      if (!playerId) return;
-      const result = rooms.startHand(roomId, playerId);
-      if (!result.ok) {
-        socket.emit('room:error', result.error ?? 'Unable to start hand');
+        cb({ ok: true, roomId: result.roomId });
+        socket.emit('room:joined', {
+          roomId: result.roomId,
+          playerId: result.playerId,
+          sessionToken: result.sessionToken,
+        });
+        emitRoomState(result.roomId);
+        emitPublicRooms();
+      } catch (error) {
+        cb({ ok: false, error: asErrorMessage(error) });
       }
     });
 
-    socket.on('room:reset', (roomId) => {
-      const playerId = socket.data.playerId;
-      if (!playerId) return;
-      const result = rooms.resetRoom(roomId, playerId);
-      if (!result.ok) {
-        socket.emit('room:error', result.error ?? 'Unable to reset room');
+    socket.on('room:join', (rawInput, cb) => {
+      try {
+        const input = parseJoinRoomInput(rawInput);
+        const result = rooms.joinRoom(input.roomId, input.nickname, input.sessionToken);
+        if (!result.ok || !result.roomId || !result.playerId || !result.sessionToken) {
+          cb({ ok: false, error: result.error ?? 'Failed to join room' });
+          return;
+        }
+
+        socket.join(result.roomId);
+        socket.data.roomId = result.roomId;
+        socket.data.playerId = result.playerId;
+        rooms.bindSocket(result.roomId, result.playerId, socket.id);
+
+        cb({ ok: true, roomId: result.roomId });
+        socket.emit('room:joined', {
+          roomId: result.roomId,
+          playerId: result.playerId,
+          sessionToken: result.sessionToken,
+        });
+        emitRoomState(result.roomId);
+        emitPublicRooms();
+      } catch (error) {
+        cb({ ok: false, error: asErrorMessage(error) });
       }
     });
 
-    socket.on('room:kick', ({ roomId, targetPlayerId }) => {
+    socket.on('room:leave', (rawRoomId) => {
       const playerId = socket.data.playerId;
       if (!playerId) return;
-      const result = rooms.kickPlayer(roomId, playerId, targetPlayerId);
-      if (!result.ok) {
-        socket.emit('room:error', result.error ?? 'Unable to kick player');
+
+      try {
+        const roomId = parseRoomId(rawRoomId);
+        rooms.leaveRoom(roomId, playerId);
+        socket.leave(roomId);
+        delete socket.data.roomId;
+        delete socket.data.playerId;
+        emitPublicRooms();
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
       }
     });
 
-    socket.on('game:action', (input) => {
+    socket.on('room:start', (rawRoomId) => {
       const playerId = socket.data.playerId;
       if (!playerId) return;
 
-      const result = rooms.applyAction(input.roomId, playerId, input.action);
-      if (!result.ok) {
-        socket.emit('room:error', result.error ?? 'Action rejected');
+      try {
+        const roomId = parseRoomId(rawRoomId);
+        const result = rooms.startHand(roomId, playerId);
+        if (!result.ok) {
+          socket.emit('room:error', result.error ?? 'Unable to start hand');
+        }
+        emitPublicRooms();
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
+      }
+    });
+
+    socket.on('room:reset', (rawRoomId) => {
+      const playerId = socket.data.playerId;
+      if (!playerId) return;
+
+      try {
+        const roomId = parseRoomId(rawRoomId);
+        const result = rooms.resetRoom(roomId, playerId);
+        if (!result.ok) {
+          socket.emit('room:error', result.error ?? 'Unable to reset room');
+        }
+        emitPublicRooms();
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
+      }
+    });
+
+    socket.on('room:kick', (rawPayload) => {
+      const playerId = socket.data.playerId;
+      if (!playerId) return;
+
+      try {
+        const parsed = parseKickPayload(rawPayload);
+        const result = rooms.kickPlayer(parsed.roomId, playerId, parsed.targetPlayerId);
+        if (!result.ok) {
+          socket.emit('room:error', result.error ?? 'Unable to kick player');
+        }
+        emitPublicRooms();
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
+      }
+    });
+
+    socket.on('room:update-settings', (rawPayload) => {
+      const playerId = socket.data.playerId;
+      if (!playerId) return;
+
+      try {
+        const parsed = parseUpdateSettingsPayload(rawPayload);
+        const result = rooms.updateSettings(parsed.roomId, playerId, parsed.settings);
+        if (!result.ok) {
+          socket.emit('room:error', result.error ?? 'Unable to update settings');
+        }
+        emitPublicRooms();
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
+      }
+    });
+
+    socket.on('room:rebuy', (rawPayload) => {
+      const playerId = socket.data.playerId;
+      if (!playerId) return;
+      try {
+        const parsed = parseRoomActionPayload(rawPayload);
+        const result = rooms.rebuy(parsed.roomId, playerId);
+        if (!result.ok) socket.emit('room:error', result.error ?? 'Unable to rebuy');
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
+      }
+    });
+
+    socket.on('room:sit-out', (rawPayload) => {
+      const playerId = socket.data.playerId;
+      if (!playerId) return;
+      try {
+        const parsed = parseRoomActionPayload(rawPayload);
+        const result = rooms.sitOut(parsed.roomId, playerId);
+        if (!result.ok) socket.emit('room:error', result.error ?? 'Unable to sit out');
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
+      }
+    });
+
+    socket.on('room:sit-in', (rawPayload) => {
+      const playerId = socket.data.playerId;
+      if (!playerId) return;
+      try {
+        const parsed = parseRoomActionPayload(rawPayload);
+        const result = rooms.sitIn(parsed.roomId, playerId);
+        if (!result.ok) socket.emit('room:error', result.error ?? 'Unable to sit in');
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
+      }
+    });
+
+    socket.on('room:leave-seat', (rawPayload) => {
+      const playerId = socket.data.playerId;
+      if (!playerId) return;
+      try {
+        const parsed = parseRoomActionPayload(rawPayload);
+        const result = rooms.leaveSeat(parsed.roomId, playerId);
+        if (!result.ok) socket.emit('room:error', result.error ?? 'Unable to leave seat');
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
+      }
+    });
+
+    socket.on('lobby:get-public-rooms', () => {
+      socket.emit('lobby:public-rooms', rooms.listPublicRooms());
+    });
+
+    socket.on('game:action', (rawInput) => {
+      const playerId = socket.data.playerId;
+      if (!playerId) return;
+
+      try {
+        const parsed = parseGameActionPayload(rawInput);
+        const result = rooms.applyAction(parsed.roomId, playerId, parsed.action);
+        if (!result.ok) {
+          socket.emit('room:error', result.error ?? 'Action rejected');
+        }
+      } catch (error) {
+        socket.emit('room:error', asErrorMessage(error));
       }
     });
 
     socket.on('disconnect', () => {
       rooms.unbindSocket(socket.id);
+      emitPublicRooms();
     });
   });
 }

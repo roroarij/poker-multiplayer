@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Card, ClientView, GameAction, PlayerSnapshot } from '@poker/shared';
+import type { Card, ClientView, GameAction, LogEvent, PlayerSnapshot } from '@poker/shared';
 import { Seat } from './Seat';
 import { PotDisplay } from './PotDisplay';
 import { CommunityCards } from './CommunityCards';
@@ -12,47 +12,69 @@ interface Props {
   playerId: string | null;
   nowMs: number;
   lastActionByPlayer: Record<string, string | null>;
-  actionLog: string[];
+  actionLog: LogEvent[];
   onAction: (action: GameAction) => void;
   onStart: () => void;
   onReset: () => void;
   onKick: (targetPlayerId: string) => void;
+  onRebuy: () => void;
+  onSitOut: () => void;
+  onSitIn: () => void;
+  onLeaveSeat: () => void;
   onCopyLink: () => void;
 }
 
-const MAX_SEATS = 9;
-
-function turnRatio(turnEndsAt: number | null, nowMs: number): number {
+function turnRatio(turnEndsAt: number | null, timeoutSeconds: number, nowMs: number): number {
   if (!turnEndsAt) return 0;
   const remaining = Math.max(0, turnEndsAt - nowMs);
-  return Math.min(1, remaining / 30000);
+  return Math.min(1, remaining / (timeoutSeconds * 1000));
 }
 
-export function Table({ view, playerId, nowMs, lastActionByPlayer, actionLog, onAction, onStart, onReset, onKick, onCopyLink }: Props) {
+export function Table({
+  view,
+  playerId,
+  nowMs,
+  lastActionByPlayer,
+  actionLog,
+  onAction,
+  onStart,
+  onReset,
+  onKick,
+  onRebuy,
+  onSitOut,
+  onSitIn,
+  onLeaveSeat,
+  onCopyLink,
+}: Props) {
   const game = view.game;
   const me = view.me;
+  const hero = game.players.find((player) => player.id === playerId);
+  const maxSeats = game.settings.maxSeats;
 
   const seatedPlayers = useMemo(
-    () => [...game.players].sort((a, b) => a.seatIndex - b.seatIndex).slice(0, MAX_SEATS),
-    [game.players],
+    () => [...game.players].sort((a, b) => a.seatIndex - b.seatIndex).slice(0, maxSeats),
+    [game.players, maxSeats],
   );
 
   const slots = useMemo<(PlayerSnapshot | null)[]>(() => {
-    const next = Array.from({ length: MAX_SEATS }, () => null as PlayerSnapshot | null);
+    const next = Array.from({ length: maxSeats }, () => null as PlayerSnapshot | null);
     seatedPlayers.forEach((player, idx) => {
       next[idx] = player;
     });
     return next;
-  }, [seatedPlayers]);
+  }, [seatedPlayers, maxSeats]);
 
   const waitingFor = game.players.find((player) => player.id === game.currentTurnPlayerId);
   const isHost = Boolean(playerId && game.hostPlayerId === playerId);
+  const nextLevelSeconds = game.nextLevelAt ? Math.max(0, Math.ceil((game.nextLevelAt - nowMs) / 1000)) : null;
+  const rebuySeconds = hero?.rebuyAvailableUntil ? Math.max(0, Math.ceil((hero.rebuyAvailableUntil - nowMs) / 1000)) : null;
 
   return (
     <section className={styles.stage}>
       <div className={styles.metaBar}>
         <div>Room {game.roomId}</div>
-        <div>{game.blindSmall}/{game.blindBig}</div>
+        <div>{game.blindSmall}/{game.blindBig} · {game.roomName}</div>
+        {game.settings.blindLevelsEnabled ? <div>Next level: {nextLevelSeconds ?? '--'}s</div> : null}
         <button onClick={onCopyLink}>Copy Invite Link</button>
       </div>
 
@@ -71,7 +93,7 @@ export function Table({ view, playerId, nowMs, lastActionByPlayer, actionLog, on
             isMe={Boolean(player && player.id === playerId)}
             meCards={player?.id === playerId ? (me?.holeCards as Card[]) ?? [] : []}
             lastAction={player ? lastActionByPlayer[player.id] ?? null : null}
-            turnRemainingRatio={player?.isTurn ? turnRatio(game.turnEndsAt, nowMs) : 0}
+            turnRemainingRatio={player?.isTurn ? turnRatio(game.turnEndsAt, game.settings.turnTimeoutSeconds, nowMs) : 0}
             canKick={Boolean(player && isHost && player.id !== playerId)}
             onKick={() => {
               if (player) onKick(player.id);
@@ -83,6 +105,12 @@ export function Table({ view, playerId, nowMs, lastActionByPlayer, actionLog, on
       <ActionPanel view={view} onAction={onAction} waitingForName={waitingFor?.nickname ?? null} />
 
       <div className={styles.utilityRow}>
+        {hero?.status === 'busted' ? (
+          <button onClick={onRebuy}>BUSTED — Rebuy{rebuySeconds !== null ? ` (${rebuySeconds}s)` : ''}</button>
+        ) : null}
+        {hero?.status === 'sitting_out' ? <button onClick={onSitIn}>Sit Back In</button> : null}
+        {hero?.status === 'active' ? <button onClick={onSitOut}>Sit Out</button> : null}
+        <button onClick={onLeaveSeat}>Leave Seat</button>
         {isHost ? (
           <>
             <button onClick={onStart}>Start Hand</button>

@@ -38,6 +38,10 @@ const emitRoomState = (roomId: string): void => {
   }
 };
 
+const emitBlindLevelChange = (payload: { roomId: string; levelIndex: number; sb: number; bb: number; nextLevelAt: number | null }): void => {
+  io.to(payload.roomId).emit('room:blind-level-changed', payload);
+};
+
 roomManager = new RoomManager(
   {
     minPlayersToStart: config.minPlayersToStart,
@@ -46,7 +50,12 @@ roomManager = new RoomManager(
     bigBlind: config.defaultBigBlind,
   },
   emitRoomState,
+  emitBlindLevelChange,
 );
+
+app.get('/public-rooms', (_req, res) => {
+  res.json({ rooms: roomManager.listPublicRooms() });
+});
 
 registerHandlers(io, roomManager);
 
